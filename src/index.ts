@@ -87,8 +87,8 @@ async function run(): Promise<void> {
 
     console.log(`[Run] 新增 ${newCount} 篇新聞`);
 
-    // 4. LLM 統整分析（使用所有新聞，包含舊的，提供更好的上下文）
-    const analysis = await analyzeNews(allNews);
+    // 4. LLM 統整分析（僅針對這段時間內的新聞進行彙整）
+    const analysis = await analyzeNews(filtered);
 
     // 5. 產生報告並推送 Telegram
     const report = formatReport(filtered, analysis, newCount);
@@ -111,12 +111,12 @@ async function run(): Promise<void> {
 
 if (isCron) {
   console.log('🗞️  每日財經新聞速報 v1.0.0 — 排程模式');
-  console.log('   排程: 每 3 小時 (06:00, 09:00, 12:00, 15:00, 18:00, 21:00)');
-  console.log('   Notion / Google News RSS / Gemini 3.0 Flash / Telegram');
+  console.log('   排程: 每日 08:00, 16:00, 22:00');
+  console.log('   Notion / Google News RSS / Gemini 2.5 Flash / Telegram');
   console.log('');
 
-  // 每 3 小時執行一次 (06, 09, 12, 15, 18, 21)
-  cron.schedule('0 6,9,12,15,18,21 * * *', () => {
+  // 每日執行 (08:00, 16:00, 22:00)
+  cron.schedule('0 8,16,22 * * *', () => {
     console.log(`[Cron] 觸發排程 — ${new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}`);
     run();
   }, { timezone: 'Asia/Taipei' });
