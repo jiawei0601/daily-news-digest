@@ -10,6 +10,7 @@ import { fetchAllNews, type KeywordNews, type NewsArticle } from './scrapers/ind
 import { analyzeNews } from './analyze.js';
 import { formatReport, sendTelegram } from './telegram.js';
 import { getDb } from './db.js';
+import { startBot } from './bot.js';
 
 const isCron = process.argv.includes('--cron');
 let running = false;
@@ -113,6 +114,9 @@ if (isCron) {
   console.log('🗞️  每日財經新聞速報 v1.0.0 — 排程模式');
   console.log('   排程: 每日 08:00, 16:00, 22:00');
   console.log('   Notion / Google News RSS / Gemini 2.5 Flash / Telegram');
+  
+  // 啟動對話機器人
+  startBot();
   console.log('');
 
   // 每日執行 (08:00, 16:00, 22:00)

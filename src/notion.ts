@@ -72,3 +72,44 @@ export async function fetchKeywords(): Promise<NotionKeyword[]> {
   console.log(`[Notion] 取得 ${keywords.length} 個關鍵字: ${keywords.map(k => k.name).join(', ')}`);
   return keywords;
 }
+
+/**
+ * 新增關鍵字到 Notion Database
+ */
+export async function addKeyword(keyword: string, category: string = '其他'): Promise<boolean> {
+  const token = process.env.NOTION_TOKEN;
+  const databaseId = process.env.NOTION_DATABASE_ID;
+
+  if (!token || !databaseId) throw new Error('NOTION_TOKEN 或 NOTION_DATABASE_ID 未設定');
+
+  try {
+    await withRetry(async () => {
+      const res = await fetch(`${NOTION_API}/pages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': NOTION_VERSION,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          parent: { database_id: databaseId },
+          properties: {
+            '名稱': { title: [{ text: { content: keyword } }] },
+            '分類': { select: { name: category } },
+            '狀態': { status: { name: '進行中' } },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Notion API 錯誤: ${res.status} ${body.slice(0, 200)}`);
+      }
+      return res.json();
+    }, 'Notion-Add');
+    return true;
+  } catch (err) {
+    console.error(`[Notion] 新增關鍵字失敗:`, err);
+    return false;
+  }
+}
