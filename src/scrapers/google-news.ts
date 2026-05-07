@@ -52,12 +52,15 @@ function parseRssItems(xml: string): Array<{
  */
 function classifySource(sourceName: string): { source: string; displayName: string } {
   const lower = sourceName.toLowerCase();
-  if (lower.includes('cnyes') || lower.includes('鉅亨')) {
-    return { source: 'cnyes', displayName: '鉅亨網' };
-  }
-  if (lower.includes('moneydj') || lower.includes('理財網')) {
-    return { source: 'moneydj', displayName: 'MoneyDJ' };
-  }
+  if (lower.includes('cnyes') || lower.includes('鉅亨')) return { source: 'cnyes', displayName: '鉅亨網' };
+  if (lower.includes('moneydj') || lower.includes('理財網')) return { source: 'moneydj', displayName: 'MoneyDJ' };
+  if (lower.includes('reuters') || lower.includes('路透')) return { source: 'reuters', displayName: 'Reuters' };
+  if (lower.includes('bloomberg') || lower.includes('彭博')) return { source: 'bloomberg', displayName: 'Bloomberg' };
+  if (lower.includes('cnbc')) return { source: 'cnbc', displayName: 'CNBC' };
+  if (lower.includes('wsj') || lower.includes('華爾街日報') || lower.includes('wall street journal')) return { source: 'wsj', displayName: 'WSJ' };
+  if (lower.includes('yahoo') || lower.includes('雅虎')) return { source: 'yahoo', displayName: 'Yahoo Finance' };
+  if (lower.includes('ft') || lower.includes('financial times')) return { source: 'ft', displayName: 'Financial Times' };
+
   return { source: 'other', displayName: sourceName };
 }
 
@@ -72,35 +75,21 @@ function cleanTitle(rawTitle: string): string {
 /**
  * 搜尋指定關鍵字的新聞
  */
-export async function searchNews(keyword: string, maxResults = 10): Promise<NewsArticle[]> {
-  const query = `${keyword} site:cnyes.com OR site:moneydj.com`;
-  const params = new URLSearchParams({
-    q: query,
-    hl: 'zh-TW',
-    gl: 'TW',
-    ceid: 'TW:zh-Hant',
-  });
-
+async function fetchRss(query: string, hl: string, gl: string, ceid: string, keyword: string, max: number): Promise<NewsArticle[]> {
+  const params = new URLSearchParams({ q: query, hl, gl, ceid });
   const url = `${GOOGLE_NEWS_RSS}?${params.toString()}`;
 
   const xml = await withRetry(async () => {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsDigest/1.0)',
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`Google News RSS 錯誤: ${res.status}`);
-    }
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) throw new Error(`Google News RSS 錯誤: ${res.status}`);
     return res.text();
   }, `GoogleNews:${keyword}`);
 
   const items = parseRssItems(xml);
   const articles: NewsArticle[] = [];
 
-  for (const item of items.slice(0, maxResults)) {
+  for (const item of items) {
     const { source, displayName } = classifySource(item.source);
-    // 只保留鉅亨網和 MoneyDJ 的新聞
     if (source === 'other') continue;
 
     articles.push({
@@ -112,6 +101,22 @@ export async function searchNews(keyword: string, maxResults = 10): Promise<News
       pubDate: item.pubDate,
       keyword,
     });
+    if (articles.length >= max) break;
+  }
+  return articles;
+}
+
+export async function searchNews(keyword: string, keywordEn?: string, maxResults = 8): Promise<NewsArticle[]> {
+  const articles: NewsArticle[] = [];
+
+  // 1. 中文搜尋 (台灣媒體)
+  const twQuery = `${keyword} site:cnyes.com OR site:moneydj.com`;
+  articles.push(...await fetchRss(twQuery, 'zh-TW', 'TW', 'TW:zh-Hant', keyword, maxResults));
+
+  // 2. 英文搜尋 (外國媒體)
+  if (keywordEn) {
+    const enQuery = `${keywordEn} site:reuters.com OR site:bloomberg.com OR site:cnbc.com OR site:wsj.com OR site:ft.com OR site:finance.yahoo.com`;
+    articles.push(...await fetchRss(enQuery, 'en-US', 'US', 'US:en', keyword, maxResults));
   }
 
   return articles;

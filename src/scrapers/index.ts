@@ -2,6 +2,7 @@
  * 爬蟲調度：整合各新聞來源
  */
 import { searchNews, type NewsArticle } from './google-news.js';
+import { translateKeywordToEnglish } from '../analyze.js';
 import type { NotionKeyword } from '../notion.js';
 
 export type { NewsArticle } from './google-news.js';
@@ -25,8 +26,9 @@ export async function fetchAllNews(
 
   for (const kw of keywords) {
     try {
-      console.log(`[Scraper] 搜尋: ${kw.name} (${kw.category})`);
-      const articles = await searchNews(kw.name, maxPerKeyword);
+      const kwEn = await translateKeywordToEnglish(kw.name);
+      console.log(`[Scraper] 搜尋: ${kw.name} / ${kwEn} (${kw.category})`);
+      const articles = await searchNews(kw.name, kwEn, maxPerKeyword);
       results.push({ keyword: kw, articles });
       console.log(`[Scraper]   → ${articles.length} 篇`);
 

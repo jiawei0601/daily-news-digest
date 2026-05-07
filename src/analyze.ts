@@ -79,3 +79,30 @@ export async function analyzeNews(
 
   return { summary: result, success: true };
 }
+
+/**
+ * 將中文關鍵字翻譯為英文，以利搜尋外媒
+ */
+export async function translateKeywordToEnglish(keyword: string): Promise<string> {
+  const baseUrl = process.env.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
+  const apiKey = process.env.LLM_API_KEY;
+  const model = process.env.LLM_MODEL || 'gemini-2.5-flash';
+
+  if (!apiKey) return keyword;
+
+  const client = new OpenAI({ baseURL: baseUrl, apiKey });
+
+  const result = await withRetry(async () => {
+    const completion = await client.chat.completions.create({
+      model,
+      temperature: 0.1,
+      messages: [
+        { role: 'system', content: 'You are a translator. Translate the given financial/tech keyword from Traditional Chinese to English. Only output the translated English keyword, nothing else. If it is already in English, output it as is.' },
+        { role: 'user', content: keyword },
+      ],
+    });
+    return completion.choices[0]?.message?.content?.trim() || keyword;
+  }, `Translate:${keyword}`);
+
+  return result;
+}
