@@ -1,5 +1,5 @@
 import { Telegraf } from 'telegraf';
-import { addKeyword } from './notion.js';
+import { addKeyword, fetchKeywords } from './notion.js';
 
 export function startBot() {
   const token = process.env.TG_BOT_TOKEN;
@@ -32,6 +32,34 @@ export function startBot() {
     } catch (err) {
       console.error(err);
       ctx.reply('❌ 系統發生錯誤。');
+    }
+  });
+
+  bot.command('listall', async (ctx) => {
+    try {
+      const keywords = await fetchKeywords();
+      if (keywords.length === 0) {
+        return ctx.reply('📭 目前沒有追蹤任何關鍵字。');
+      }
+
+      // 按分類分組
+      const byCategory: Record<string, string[]> = {};
+      for (const kw of keywords) {
+        if (!byCategory[kw.category]) byCategory[kw.category] = [];
+        byCategory[kw.category].push(kw.name);
+      }
+
+      let replyMsg = '📋 **目前追蹤中的關鍵字**\n\n';
+      for (const [cat, items] of Object.entries(byCategory)) {
+        replyMsg += `📁 **${cat}**\n`;
+        replyMsg += items.map(item => `  • ${item}`).join('\n');
+        replyMsg += '\n\n';
+      }
+
+      ctx.reply(replyMsg, { parse_mode: 'Markdown' });
+    } catch (err) {
+      console.error(err);
+      ctx.reply('❌ 取得關鍵字失敗，請檢查 Notion API。');
     }
   });
 
