@@ -3,24 +3,25 @@
  * - articles: 已抓取的新聞文章（用於去重）
  * - reports: 報告歷史紀錄
  */
-import Database from 'better-sqlite3';
+// @ts-ignore
+import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'news-digest.db');
 
-let db: Database.Database;
+let db: any;
 
-export function getDb(): Database.Database {
+export function getDb(): any {
   if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
+    db = new DatabaseSync(DB_PATH);
+    db.exec('PRAGMA journal_mode = WAL;');
     migrate(db);
   }
   return db;
 }
 
-function migrate(db: Database.Database): void {
+function migrate(db: any): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS articles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

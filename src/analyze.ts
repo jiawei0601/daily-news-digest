@@ -40,7 +40,7 @@ export interface AnalysisResult {
 export async function analyzeNews(
   newsData: KeywordNews[],
 ): Promise<AnalysisResult> {
-  const baseUrl = process.env.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
+  const baseUrl = process.env.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/';
   const apiKey = process.env.LLM_API_KEY;
   const model = process.env.LLM_MODEL || 'gemini-3.0-flash';
 

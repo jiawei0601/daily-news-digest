@@ -32,8 +32,8 @@ export async function fetchKeywords(): Promise<NotionKeyword[]> {
       },
       body: JSON.stringify({
         filter: {
-          property: '啟用',
-          checkbox: { equals: true },
+          property: '狀態',
+          status: { equals: '進行中' },
         },
       }),
     });

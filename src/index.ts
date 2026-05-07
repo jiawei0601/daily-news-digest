@@ -27,11 +27,18 @@ function filterNewArticles(newsData: KeywordNews[]): { filtered: KeywordNews[]; 
   let newCount = 0;
   const filtered: KeywordNews[] = [];
 
-  const insertMany = db.transaction((articles: NewsArticle[]) => {
-    for (const a of articles) {
-      insertStmt.run(a.guid, a.keyword, a.title, a.source, a.url, a.pubDate);
+  const insertMany = (articles: NewsArticle[]) => {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const a of articles) {
+        insertStmt.run(a.guid, a.keyword, a.title, a.source, a.url, a.pubDate);
+      }
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
     }
-  });
+  };
 
   for (const kn of newsData) {
     const newArticles = kn.articles.filter((a) => !checkStmt.get(a.guid));
