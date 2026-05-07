@@ -113,3 +113,44 @@ export async function addKeyword(keyword: string, category: string = '其他'): 
     return false;
   }
 }
+
+/**
+ * 移除關鍵字 (將 Notion 中的狀態改為「停止追蹤」)
+ */
+export async function removeKeyword(keywordName: string): Promise<boolean | string> {
+  const token = process.env.NOTION_TOKEN;
+  if (!token) throw new Error('NOTION_TOKEN 未設定');
+
+  try {
+    const keywords = await fetchKeywords();
+    const target = keywords.find((k) => k.name.toLowerCase() === keywordName.toLowerCase());
+    
+    if (!target) return 'NOT_FOUND';
+
+    await withRetry(async () => {
+      const res = await fetch(`${NOTION_API}/pages/${target.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': NOTION_VERSION,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: {
+            '狀態': { status: { name: '停止追蹤' } },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`Notion API 錯誤: ${res.status} ${body.slice(0, 200)}`);
+      }
+      return res.json();
+    }, 'Notion-Remove');
+    return true;
+  } catch (err) {
+    console.error(`[Notion] 移除關鍵字失敗:`, err);
+    return false;
+  }
+}
